@@ -4,4 +4,6 @@ A drop-in replacement for the OpenAI Python SDK that provides secure and anonymo
 AI inference via Confident Security.
 """
 
-__version__ = "0.1.0"
+from ._version import __version__, LIBCONFSEC_VERSION
+
+__all__ = ["__version__", "LIBCONFSEC_VERSION"]

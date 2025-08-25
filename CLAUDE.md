@@ -13,3 +13,7 @@ a drop-in replacement for the OpenAI Python SDK.
     regular HTTP client.
   - A wrapper for the OpenAI Python SDK, which uses the above HTTP client to
     make requests to Confident Security.
+
+## Useful Commands
+
+- `uv run pytest tests` -- run the tests
