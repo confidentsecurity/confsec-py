@@ -57,7 +57,7 @@ class LibConfsecBase(ABC):
         """
 
     @abstractmethod
-    def client_get_max_candidate_nodes(self, client_handle: ClientHandle) -> None:
+    def client_get_max_candidate_nodes(self, client_handle: ClientHandle) -> int:
         """
         Get the maximum number of candidate nodes.
 

@@ -27,7 +27,7 @@ class LibConfsec(LibConfsecBase):
     ) -> int:
         return lcp.confsec_client_get_default_credit_amount_per_request(client_handle)
 
-    def client_get_max_candidate_nodes(self, client_handle: ClientHandle) -> None:
+    def client_get_max_candidate_nodes(self, client_handle: ClientHandle) -> int:
         return lcp.confsec_client_get_max_candidate_nodes(client_handle)
 
     def client_get_default_node_tags(self, client_handle: ClientHandle) -> list[str]:
