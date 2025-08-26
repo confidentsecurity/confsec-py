@@ -2,6 +2,7 @@ import json
 from typing import TypedDict
 
 from .libconfsec.base import LibConfsecBase, ClientHandle
+from .response import Response
 
 
 class WalletStatus(TypedDict):
@@ -55,6 +56,10 @@ class ConfsecClient:
 
     def get_wallet_status(self) -> WalletStatus:
         return json.loads(self._lc.client_get_wallet_status(self._handle))
+
+    def do_request(self, request: bytes) -> Response:
+        handle = self._lc.client_do_request(self._handle, request)
+        return Response(self._lc, handle)
 
     def close(self):
         self._lc.client_destroy(self._handle)
