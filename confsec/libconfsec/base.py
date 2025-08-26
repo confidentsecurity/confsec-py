@@ -18,7 +18,7 @@ class LibConfsecBase(ABC):
         max_candidate_nodes: int,
         default_node_tags: list[str] | None,
         env: str,
-    ) -> int:
+    ) -> ClientHandle:
         """
         Create a new client.
 
@@ -30,7 +30,7 @@ class LibConfsecBase(ABC):
             env (str): The environment to use.
 
         Returns:
-            int: The client handle.
+            ClientHandle: The client handle.
         """
 
     @abstractmethod
