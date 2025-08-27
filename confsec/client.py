@@ -1,9 +1,12 @@
 import json
-from typing import TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 from .closeable import Closeable
 from .libconfsec.base import LibConfsecBase, ClientHandle
 from .response import Response
+
+if TYPE_CHECKING:
+    from httpx import Client as HttpxClient
 
 
 class WalletStatus(TypedDict):
@@ -63,6 +66,12 @@ class ConfsecClient(Closeable):
     def do_request(self, request: bytes) -> Response:
         handle = self._lc.client_do_request(self._handle, request)
         return Response(self._lc, handle)
+
+    def get_http_client(self) -> "HttpxClient":
+        from httpx import Client as HttpxClient
+        from .transport import ConfsecTransport
+
+        return HttpxClient(transport=ConfsecTransport(self))
 
     def _close(self):
         self._lc.client_destroy(self._handle)

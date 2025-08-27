@@ -1,6 +1,6 @@
 import json
 from functools import cached_property
-from typing import TypedDict
+from typing import Iterator, TypedDict
 
 from .closeable import Closeable
 from .libconfsec.base import LibConfsecBase, ResponseHandle, ResponseStreamHandle
@@ -20,22 +20,27 @@ class ResponseMetadata(TypedDict):
 
 
 class ResponseStream(Closeable):
-    def __init__(self, lc: LibConfsecBase, handle: ResponseStreamHandle) -> None:
+    def __init__(
+        self, lc: LibConfsecBase, resp: "Response", handle: ResponseStreamHandle
+    ) -> None:
         super().__init__()
         self._lc = lc
+        # Need to hold a reference to the response to keep it alive
+        self._resp: "Response | None" = resp
         self._handle = handle
-        self._closed = False
 
     def get_next(self) -> bytes:
         return self._lc.response_stream_get_next(self._handle)
 
     def _close(self) -> None:
         self._lc.response_stream_destroy(self._handle)
+        # Release the reference to the response
+        self._resp = None
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[bytes]:
         return self
 
-    def __next__(self):
+    def __next__(self) -> bytes:
         data = self.get_next()
         if not data:
             raise StopIteration
@@ -65,7 +70,7 @@ class Response(Closeable):
 
     def get_stream(self) -> ResponseStream:
         handle = self._lc.response_get_stream(self._handle)
-        return ResponseStream(self._lc, handle)
+        return ResponseStream(self._lc, self, handle)
 
     def _close(self) -> None:
         self._lc.response_destroy(self._handle)
