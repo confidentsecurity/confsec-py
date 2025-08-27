@@ -56,6 +56,10 @@ class Response(Closeable):
         return json.loads(self._lc.response_get_metadata(self._handle))
 
     @cached_property
+    def is_streaming(self) -> bool:
+        return self._lc.response_is_streaming(self._handle)
+
+    @cached_property
     def body(self) -> bytes:
         return self._lc.response_get_body(self._handle)
 

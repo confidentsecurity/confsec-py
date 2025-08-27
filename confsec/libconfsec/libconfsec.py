@@ -49,6 +49,9 @@ class LibConfsec(LibConfsecBase):
     def response_destroy(self, response_handle: ResponseHandle) -> None:
         lcp.confsec_response_destroy(response_handle)
 
+    def response_is_streaming(self, response_handle: ResponseHandle) -> bool:
+        return lcp.confsec_response_is_streaming(response_handle)
+
     def response_get_metadata(self, response_handle: ResponseHandle) -> str:
         return lcp.confsec_response_get_metadata(response_handle)
 

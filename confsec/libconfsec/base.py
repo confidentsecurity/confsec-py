@@ -129,6 +129,18 @@ class LibConfsecBase(ABC):
         """
 
     @abstractmethod
+    def response_is_streaming(self, response_handle: ResponseHandle) -> bool:
+        """
+        Check if the response body is a stream.
+
+        Args:
+            response_handle (ResponseHandle): The response handle.
+
+        Returns:
+            bool: True if the response is a stream, False otherwise.
+        """
+
+    @abstractmethod
     def response_get_metadata(self, response_handle: ResponseHandle) -> str:
         """
         Get the response metadata.

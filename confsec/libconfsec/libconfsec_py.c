@@ -1,6 +1,7 @@
 #define PY_SSIZE_T_CLEAN
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <Python.h>
 #include "libconfsec.h"
 
@@ -269,6 +270,21 @@ static PyObject* py_confsec_response_get_metadata(PyObject* self, PyObject* args
     return py_metadata;
 }
 
+static PyObject* py_confsec_response_is_streaming(PyObject* self, PyObject* args) {
+    INIT_ERROR;
+    uintptr_t handle;
+    long is_streaming;
+
+    if (!PyArg_ParseTuple(args, "K", &handle)) {
+        return NULL;
+    }
+
+    is_streaming = Confsec_ResponseIsStreaming(handle, &err);
+    HANDLE_ERROR(err);
+
+    return PyBool_FromLong(is_streaming);
+}
+
 PyObject* py_confsec_response_get_body(PyObject* self, PyObject* args) {
     INIT_ERROR;
     uintptr_t handle;
@@ -369,6 +385,7 @@ static PyMethodDef LibconfsecPyMethods[] = {
     {"confsec_client_get_wallet_status", py_confsec_client_get_wallet_status, METH_VARARGS, "Get the wallet status"},
     {"confsec_client_do_request", py_confsec_client_do_request, METH_VARARGS, "Perform a request"},
     {"confsec_response_destroy", py_confsec_response_destroy, METH_VARARGS, "Destroy a response"},
+    {"confsec_response_is_streaming", py_confsec_response_is_streaming, METH_VARARGS, "Check if a response is streaming"},
     {"confsec_response_get_metadata", py_confsec_response_get_metadata, METH_VARARGS, "Get the metadata of a response"},
     {"confsec_response_get_body", py_confsec_response_get_body, METH_VARARGS, "Get the body of a response"},
     {"confsec_response_get_stream", py_confsec_response_get_stream, METH_VARARGS, "Get the stream of a response"},
