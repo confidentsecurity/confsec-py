@@ -42,38 +42,71 @@ class BuildLibconfsec(build_ext):
     """Custom build command to download libconfsec binary."""
 
     def run(self):
-        """Download and extract libconfsec for the current platform."""
-        os_name, arch = get_platform_info()
+        """Download and extract libconfsec for the current platform, or use local files if specified."""
+        # Check if we should use local libconfsec files
+        use_local = os.environ.get("USE_LOCAL_LIBCONFSEC", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
 
-        # Create lib directory
         lib_dir = Path("confsec") / "lib"
         lib_dir.mkdir(parents=True, exist_ok=True)
 
-        # Download URL
-        tag = f"libconfsec%2Fv{LIBCONFSEC_VERSION}"
-        filename = f"libconfsec_{os_name}_{arch}.zip"
-        url = f"https://github.com/confidentsecurity/libconfsec/releases/download/{tag}/{filename}"
+        if use_local:
+            print("Using local libconfsec files from confsec/lib/")
+            # Verify that required local files exist
+            required_files = ["libconfsec.a", "libconfsec.h"]
+            missing_files = []
+            for lib_filename in required_files:
+                if not (lib_dir / lib_filename).exists():
+                    missing_files.append(lib_filename)
 
-        # Download and extract
-        zip_path = lib_dir / filename
-        print(f"Downloading libconfsec from {url}")
-
-        # Check for GitHub token for private repo access
-        github_token = os.environ.get("GITHUB_TOKEN")
-        if github_token:
-            headers = {"Authorization": f"Bearer {github_token}"}
-            req = Request(url, headers=headers)
-            with urlopen(req) as response, open(zip_path, "wb") as f:
-                f.write(response.read())
+            if missing_files:
+                raise RuntimeError(
+                    f"USE_LOCAL_LIBCONFSEC is set but missing files: {', '.join(missing_files)}"
+                )
         else:
-            urlretrieve(url, zip_path)
+            # Download libconfsec binary
+            os_name, arch = get_platform_info()
 
-        print(f"Extracting {zip_path}")
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall(lib_dir)
+            # Clear out any existing libconfsec files
+            for file in lib_dir.iterdir():
+                if file.name.startswith("libconfsec_"):
+                    file.unlink()
 
-        # Clean up zip file
-        zip_path.unlink()
+            # Download URL
+            tag = f"libconfsec%2Fv{LIBCONFSEC_VERSION}"
+            lib_filename = f"libconfsec_{os_name}_{arch}.zip"
+            lib_url = f"https://github.com/confidentsecurity/libconfsec/releases/download/{tag}/{lib_filename}"
+            sha_filename = f"{lib_filename}.sha256"
+            sha_url = f"https://github.com/confidentsecurity/libconfsec/releases/download/{tag}/{lib_filename}.sha256"
+
+            # Download and extract
+            zip_path = lib_dir / lib_filename
+            sha_path = lib_dir / sha_filename
+            print(f"Downloading libconfsec from {lib_url}")
+
+            # Check for GitHub token for private repo access
+            github_token = os.environ.get("GITHUB_TOKEN")
+            if github_token:
+                headers = {"Authorization": f"Bearer {github_token}"}
+                req = Request(lib_url, headers=headers)
+                with urlopen(req) as response, open(zip_path, "wb") as f:
+                    f.write(response.read())
+                req = Request(sha_url, headers=headers)
+                with urlopen(req) as response, open(sha_path, "wb") as f:
+                    f.write(response.read())
+            else:
+                urlretrieve(lib_url, zip_path)
+                urlretrieve(sha_url, sha_path)
+
+            print(f"Extracting {zip_path}")
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                zip_ref.extractall(lib_dir)
+
+            # Clean up zip file
+            zip_path.unlink()
 
         super().run()
 
