@@ -1,6 +1,7 @@
 import json
 from typing import TypedDict
 
+from .closeable import Closeable
 from .libconfsec.base import LibConfsecBase, ClientHandle
 from .response import Response
 
@@ -11,7 +12,7 @@ class WalletStatus(TypedDict):
     credits_available: int
 
 
-class ConfsecClient:
+class ConfsecClient(Closeable):
     def __init__(
         self,
         api_key: str,
@@ -20,6 +21,8 @@ class ConfsecClient:
         default_node_tags: list[str] | None = None,
         **kwargs,
     ) -> None:
+        super().__init__()
+
         env = kwargs.get("env", "production")
 
         lc: LibConfsecBase
@@ -35,7 +38,7 @@ class ConfsecClient:
             api_key,
             concurrent_requests_target,
             max_candidate_nodes,
-            default_node_tags,
+            default_node_tags or [],
             env,
         )
 
@@ -61,14 +64,8 @@ class ConfsecClient:
         handle = self._lc.client_do_request(self._handle, request)
         return Response(self._lc, handle)
 
-    def close(self):
+    def _close(self):
         self._lc.client_destroy(self._handle)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
 
 
 def get_libconfsec() -> LibConfsecBase:

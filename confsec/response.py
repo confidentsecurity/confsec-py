@@ -2,6 +2,7 @@ import json
 from functools import cached_property
 from typing import TypedDict
 
+from .closeable import Closeable
 from .libconfsec.base import LibConfsecBase, ResponseHandle, ResponseStreamHandle
 
 
@@ -18,22 +19,18 @@ class ResponseMetadata(TypedDict):
     headers: list[KV]
 
 
-class ResponseStream:
+class ResponseStream(Closeable):
     def __init__(self, lc: LibConfsecBase, handle: ResponseStreamHandle) -> None:
+        super().__init__()
         self._lc = lc
         self._handle = handle
+        self._closed = False
 
     def get_next(self) -> bytes:
         return self._lc.response_stream_get_next(self._handle)
 
-    def close(self) -> None:
+    def _close(self) -> None:
         self._lc.response_stream_destroy(self._handle)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
 
     def __iter__(self):
         return self
@@ -48,8 +45,9 @@ class ResponseStream:
         self.close()
 
 
-class Response:
+class Response(Closeable):
     def __init__(self, lc: LibConfsecBase, handle: ResponseHandle) -> None:
+        super().__init__()
         self._lc = lc
         self._handle = handle
 
@@ -65,14 +63,8 @@ class Response:
         handle = self._lc.response_get_stream(self._handle)
         return ResponseStream(self._lc, handle)
 
-    def close(self) -> None:
+    def _close(self) -> None:
         self._lc.response_destroy(self._handle)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
 
     def __del__(self):
         self.close()
