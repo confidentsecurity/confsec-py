@@ -2,8 +2,8 @@ import json
 from functools import cached_property
 from typing import Iterator, TypedDict
 
-from .closeable import Closeable
-from .libconfsec.base import LibConfsecBase, ResponseHandle, ResponseStreamHandle
+from ..closeable import Closeable
+from ..libconfsec.base import LibConfsecBase, ResponseHandle, ResponseStreamHandle
 
 
 class KV(TypedDict):

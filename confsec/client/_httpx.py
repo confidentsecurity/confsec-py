@@ -25,7 +25,7 @@ def prepare_request(request: Request) -> bytes:
     return f"{request_line}\r\n{headers}\r\n\r\n".encode("utf-8") + body
 
 
-class ConfsecSyncByteStream(SyncByteStream):
+class ConfsecHttpxSyncByteStream(SyncByteStream):
     def __init__(self, stream: ResponseStream) -> None:
         self._stream = stream
 
@@ -36,7 +36,7 @@ class ConfsecSyncByteStream(SyncByteStream):
         self._stream.close()
 
 
-class ConfsecTransport(BaseTransport):
+class ConfsecHttpxTransport(BaseTransport):
     _openai_completions_path = "/v1/completions"
     _openai_chat_completions_path = "/v1/chat/completions"
 
@@ -53,7 +53,7 @@ class ConfsecTransport(BaseTransport):
 
         body, stream = None, None
         if confsec_resp.is_streaming:
-            stream = ConfsecSyncByteStream(confsec_resp.get_stream())
+            stream = ConfsecHttpxSyncByteStream(confsec_resp.get_stream())
         else:
             body = confsec_resp.body
             confsec_resp.close()

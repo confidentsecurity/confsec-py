@@ -5,5 +5,6 @@ AI inference via Confident Security.
 """
 
 from ._version import __version__, LIBCONFSEC_VERSION
+from .client import ConfsecClient
 
-__all__ = ["__version__", "LIBCONFSEC_VERSION"]
+__all__ = ["__version__", "LIBCONFSEC_VERSION", "ConfsecClient"]
