@@ -20,14 +20,14 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(skip_e2e)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def api_key():
     _api_key = os.environ.get("CONFSEC_API_KEY")
     assert _api_key is not None
     return _api_key
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def env():
     _env = os.environ.get("CONFSEC_ENV")
     if _env is None:
