@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import os
-from typing import NotRequired, TypedDict
+from typing import TypedDict
+from typing_extensions import NotRequired
 
 from openai import OpenAI as _OpenAI
 from openai.resources.chat import Chat

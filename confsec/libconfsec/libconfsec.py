@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .base import LibConfsecBase, ClientHandle, ResponseHandle, ResponseStreamHandle
 from . import libconfsec_py as lcp  # type: ignore[attr-defined]
 
