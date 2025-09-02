@@ -2,8 +2,7 @@ import json
 
 import pytest
 
-from confsec.client import ConfsecClient
-from confsec.response import Response
+from confsec.client import ConfsecClient, Response
 
 
 URL = "http://confsec.invalid/api/generate"
@@ -68,6 +67,7 @@ def test_client_e2e(api_key, env):
             assert len(body["response"]) > 0
 
         # Do a streaming request
+        body = b""
         chunks: list[str] = []
         req = request("POST", URL, HEADERS, get_body(PROMPT, stream=True))
         with client.do_request(req) as resp:
@@ -76,10 +76,18 @@ def test_client_e2e(api_key, env):
             assert resp.metadata["status_code"] == 200
             with resp.get_stream() as stream:
                 for chunk in stream:
-                    chunk_json = json.loads(chunk)
-                    print(chunk_json)
-                    assert "response" in chunk_json
-                    chunks.append(chunk_json["response"])
+                    body += chunk
+                    lines = body.splitlines()
+                    if len(lines) <= 1:
+                        continue
+                    for line in lines[:-1]:
+                        if not line:
+                            continue
+                        chunk_json = json.loads(line)
+                        assert "response" in chunk_json
+                        chunks.append(chunk_json["response"])
+
+                    body = lines[-1]
 
             assert len(chunks) > 1
             full_response = "".join(chunks).lower()

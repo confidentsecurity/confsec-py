@@ -42,10 +42,23 @@ def test_httpx_e2e(api_key, env):
             assert resp.headers["content-type"] == "application/x-ndjson"
             assert isinstance(resp.stream, SyncByteStream)
 
-            chunks = []
-            for line in resp.stream:
-                assert line
-                chunk = json.loads(line)["response"]
-                chunks.append(chunk)
+            body = b""
+            chunks: list[str] = []
+            for chunk in resp.stream:
+                body += chunk
+                lines = body.splitlines()
+                if len(lines) <= 1:
+                    continue
+
+                for line in lines[:-1]:
+                    if not line:
+                        continue
+                    chunk_json = json.loads(line)
+                    assert "response" in chunk_json
+                    chunks.append(chunk_json["response"])
+
+                body = lines[-1]
 
             assert len(chunks) > 1
+            full_response = "".join(chunks)
+            assert len(full_response) > 0
