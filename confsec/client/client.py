@@ -34,7 +34,7 @@ class ConfsecClient(Closeable):
         lc: LibConfsecBase
         if "libconfsec" in kwargs:
             lc = kwargs["libconfsec"]
-            assert isinstance(self._lc, LibConfsecBase)
+            assert isinstance(lc, LibConfsecBase)
         else:
             lc = get_libconfsec()
 
