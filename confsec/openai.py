@@ -19,6 +19,17 @@ class ConfsecConfig(TypedDict):
 
 
 class OpenAI(Closeable):
+    """
+    OpenAI-compatible client that routes requests through Confsec.
+
+    Drop-in replacement for the OpenAI Python client that provides secure,
+    anonymous access to AI models via the Confsec network.
+
+    Args:
+        api_key: Confsec API key (or None to use CONFSEC_API_KEY environment variable)
+        confsec_config: Additional configuration for the Confsec client
+    """
+
     chat: Chat
     completions: Completions
 
@@ -45,6 +56,12 @@ class OpenAI(Closeable):
 
     @property
     def confsec_client(self) -> ConfsecClient:
+        """
+        Access the underlying ConfsecClient instance.
+
+        Returns:
+            The ConfsecClient used for routing requests
+        """
         return self._confsec_client
 
     def _close(self):

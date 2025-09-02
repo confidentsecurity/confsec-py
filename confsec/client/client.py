@@ -19,6 +19,17 @@ class WalletStatus(TypedDict):
 
 
 class ConfsecClient(Closeable):
+    """
+    Client for making requests via Confsec.
+
+    Args:
+        api_key: Your Confsec API key
+        concurrent_requests_target: Target number of concurrent requests (0 for default)
+        max_candidate_nodes: Maximum number of candidate nodes to consider (0 for default)
+        default_node_tags: Default tags to use for node selection
+        **kwargs: Additional configuration options including 'env' (production/staging)
+    """
+
     def __init__(
         self,
         api_key: str,
@@ -61,18 +72,48 @@ class ConfsecClient(Closeable):
         return self._lc.client_get_default_node_tags(self._handle)
 
     def set_default_node_tags(self, default_node_tags: list[str]) -> None:
+        """
+        Set the default node tags for this client.
+
+        Args:
+            default_node_tags: List of tags to use for node selection
+        """
         self._lc.client_set_default_node_tags(self._handle, default_node_tags)
 
     def get_wallet_status(self) -> WalletStatus:
+        """
+        Get the current wallet status including credits spent, held, and available.
+
+        Returns:
+            WalletStatus containing credit information
+        """
         return json.loads(self._lc.client_get_wallet_status(self._handle))
 
     def do_request(self, request: bytes) -> Response:
+        """
+        Make a request via Confsec.
+
+        Args:
+            request: Raw HTTP request as bytes
+
+        Returns:
+            Response object for the request
+        """
         handle = self._lc.client_do_request(self._handle, request)
         return Response(self._lc, handle)
 
     def get_http_client(
         self, http_client_type: HttpClientType = "httpx"
     ) -> "HttpxClient":
+        """
+        Get an HTTP client configured to use Confsec transport.
+
+        Args:
+            http_client_type: Type of HTTP client to create (currently only "httpx")
+
+        Returns:
+            Configured HTTP client instance
+        """
         assert http_client_type == "httpx"
 
         from httpx import Client as HttpxClient

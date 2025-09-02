@@ -20,6 +20,12 @@ class ResponseMetadata(TypedDict):
 
 
 class ResponseStream(Closeable):
+    """
+    Streaming response from a Confsec request.
+
+    Provides an iterator interface for reading streaming response data.
+    """
+
     def __init__(
         self, lc: LibConfsecBase, resp: "Response", handle: ResponseStreamHandle
     ) -> None:
@@ -30,6 +36,12 @@ class ResponseStream(Closeable):
         self._handle = handle
 
     def get_next(self) -> bytes:
+        """
+        Get the next chunk of streaming data.
+
+        Returns:
+            Next chunk as bytes, or empty bytes if stream is finished
+        """
         return self._lc.response_stream_get_next(self._handle)
 
     def _close(self) -> None:
@@ -51,6 +63,12 @@ class ResponseStream(Closeable):
 
 
 class Response(Closeable):
+    """
+    Response from a Confsec request.
+
+    Provides access to response metadata, body data, and streaming capabilities.
+    """
+
     def __init__(self, lc: LibConfsecBase, handle: ResponseHandle) -> None:
         super().__init__()
         self._lc = lc
@@ -69,6 +87,12 @@ class Response(Closeable):
         return self._lc.response_get_body(self._handle)
 
     def get_stream(self) -> ResponseStream:
+        """
+        Get a streaming interface for this response.
+
+        Returns:
+            ResponseStream for iterating over response data
+        """
         handle = self._lc.response_get_stream(self._handle)
         return ResponseStream(self._lc, self, handle)
 
