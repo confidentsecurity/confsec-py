@@ -90,10 +90,10 @@ class ConfsecHttpxTransport(BaseTransport):
         existing_header = request.headers.get("X-Confsec-Node-Tags", "")
         if existing_header:
             existing_tags = existing_header.split(",")
-            if tag not in existing_tags:
-                header = f"{existing_header},{tag}"
-            else:
+            if any(t.startswith("model=") for t in existing_tags):
                 header = existing_header
+            else:
+                header = f"{existing_header},{tag}"
         else:
             header = tag
 
