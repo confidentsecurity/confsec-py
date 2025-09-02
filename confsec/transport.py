@@ -1,3 +1,4 @@
+import json
 from typing import TYPE_CHECKING, Iterator
 
 from httpx import BaseTransport, Request, Response as HttpxResponse, SyncByteStream
@@ -36,10 +37,15 @@ class ConfsecSyncByteStream(SyncByteStream):
 
 
 class ConfsecTransport(BaseTransport):
+    _openai_completions_path = "/v1/completions"
+    _openai_chat_completions_path = "/v1/chat/completions"
+
     def __init__(self, client: "ConfsecClient") -> None:
         self._client = client
 
     def handle_request(self, request: Request) -> HttpxResponse:
+        request = self._preprocess_request(request)
+
         req_bytes = prepare_request(request)
         confsec_resp = self._client.do_request(req_bytes)
         resp_metadata = confsec_resp.metadata
@@ -59,3 +65,37 @@ class ConfsecTransport(BaseTransport):
             stream=stream,
             request=request,
         )
+
+    def _preprocess_request(self, request: Request) -> Request:
+        if request.url.path == self._openai_completions_path:
+            request = self._maybe_add_model_tag(request)
+        if request.url.path == self._openai_chat_completions_path:
+            request = self._maybe_add_model_tag(request)
+
+        return request
+
+    def _maybe_add_model_tag(self, request: Request) -> Request:
+        try:
+            body = json.loads(request.content.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            # Not a JSON request, so we can't extract the model
+            return request
+
+        # Likewise, if the model is not specified in the body, exit early
+        if "model" not in body:
+            return request
+
+        header: str
+        tag = f"model={body['model']}"
+        existing_header = request.headers.get("X-Confsec-Node-Tags", "")
+        if existing_header:
+            existing_tags = existing_header.split(",")
+            if tag not in existing_tags:
+                header = f"{existing_header},{tag}"
+            else:
+                header = existing_header
+        else:
+            header = tag
+
+        request.headers["X-Confsec-Node-Tags"] = header
+        return request
