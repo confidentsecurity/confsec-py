@@ -48,8 +48,13 @@ jobs:
     - name: Run type checking
       run: uv run mypy confsec/
     
-    - name: Build package
-      run: uv build
+    - name: Build wheels
+      uses: pypa/cibuildwheel@v2.16.2
+      env:
+        CIBW_BUILD: cp38-* cp39-* cp310-* cp311-* cp312-*
+        CIBW_ARCHS_LINUX: x86_64 aarch64
+        CIBW_ARCHS_MACOS: x86_64 arm64
+        CIBW_ENVIRONMENT: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
     
     - name: Publish to Test PyPI
       if: github.event.inputs.pypi_env == 'testpypi' || (github.event_name == 'workflow_dispatch' && github.event.inputs.pypi_env == 'testpypi')
