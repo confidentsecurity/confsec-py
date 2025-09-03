@@ -46,3 +46,6 @@ Homepage = "https://github.com/confidentsecurity/confsec-py"
 Documentation = "https://github.com/confidentsecurity/confsec-py"
 Repository = "https://github.com/confidentsecurity/confsec-py"
 Issues = "https://github.com/confidentsecurity/confsec-py/issues"
+
+[tool.setuptools]
+packages = ["confsec", "confsec.libconfsec"]
