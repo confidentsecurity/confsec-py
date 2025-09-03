@@ -48,8 +48,8 @@ jobs:
     - name: Run type checking
       run: uv run mypy confsec/
     
-    - name: Build package
-      run: uv build
+    - name: Build source distribution
+      run: uv build --sdist
     
     - name: Publish to Test PyPI
       if: github.event.inputs.pypi_env == 'testpypi' || (github.event_name == 'workflow_dispatch' && github.event.inputs.pypi_env == 'testpypi')
@@ -57,9 +57,11 @@ jobs:
       with:
         repository-url: https://test.pypi.org/legacy/
         print-hash: true
+        verbose: true
     
     - name: Publish to PyPI
       if: github.event_name == 'release' || github.event.inputs.pypi_env == 'pypi'
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         print-hash: true
+        verbose: true
