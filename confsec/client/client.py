@@ -29,7 +29,7 @@ class ConfsecClient(Closeable):
         concurrent_requests_target: Target number of concurrent requests (0 for default)
         max_candidate_nodes: Maximum number of candidate nodes to consider (0 for default)
         default_node_tags: Default tags to use for node selection
-        **kwargs: Additional configuration options including 'env' (production/staging)
+        **kwargs: Additional configuration
     """
 
     def __init__(
@@ -42,7 +42,7 @@ class ConfsecClient(Closeable):
     ) -> None:
         super().__init__()
 
-        env = kwargs.get("env", "production")
+        env = kwargs.get("env", "prod")
 
         lc: LibConfsecBase
         if "libconfsec" in kwargs:

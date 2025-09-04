@@ -15,9 +15,7 @@ class TestConfsecClientInitialization:
         client = ConfsecClient("test_api_key", libconfsec=mock_lc)
 
         assert client._lc is mock_lc
-        mock_lc.client_create.assert_called_once_with(
-            "test_api_key", 0, 0, [], "production"
-        )
+        mock_lc.client_create.assert_called_once_with("test_api_key", 0, 0, [], "prod")
 
     @patch("confsec.client.client.get_libconfsec")
     def test_creates_default_libconfsec_when_not_provided(self, mock_get_libconfsec):
@@ -49,16 +47,14 @@ class TestConfsecClientInitialization:
             "test_api_key", 5, 10, ["tag1", "tag2"], "staging"
         )
 
-    def test_default_env_is_production(self):
+    def test_default_env_is_prod(self):
         mock_lc = Mock(spec=LibConfsecBase)
         mock_handle = Mock(spec=ClientHandle)
         mock_lc.client_create.return_value = mock_handle
 
         _ = ConfsecClient("test_api_key", libconfsec=mock_lc)
 
-        mock_lc.client_create.assert_called_once_with(
-            "test_api_key", 0, 0, [], "production"
-        )
+        mock_lc.client_create.assert_called_once_with("test_api_key", 0, 0, [], "prod")
 
 
 class TestWalletStatus:
