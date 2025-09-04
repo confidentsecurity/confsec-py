@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "confsec"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python SDK for Confident Security - secure and anonymous AI inference"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -48,4 +48,4 @@ Repository = "https://github.com/confidentsecurity/confsec-py"
 Issues = "https://github.com/confidentsecurity/confsec-py/issues"
 
 [tool.setuptools]
-packages = ["confsec", "confsec.libconfsec"]
+packages = ["confsec", "confsec.client", "confsec.libconfsec"]
