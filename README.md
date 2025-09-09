@@ -5,7 +5,8 @@
 The CONFSEC Python SDK provides developers with a convenient way to make secure
 and anonymous AI inference requests via CONFSEC. It can function as a drop-in
 replacement for existing OpenAI clients, or as an HTTP client for lower-level
-access to the CONFSEC API.
+access to the CONFSEC API. Using the SDK, programs can make requests without the
+need to deploy and manager the CONFSEC proxy.
 
 ## Installation
 
@@ -110,7 +111,8 @@ with ConfsecClient(api_key=os.environ["CONFSEC_API_KEY"]) as client:
     http = client.get_http_client()
     response = http.request(
         "POST",
-        "https://api.openai.com/v1/chat/completions",
+        # Important: the base URL must be set to "https://confsec.invalid"
+        "https://confsec.invalid/v1/chat/completions",
         json={
             "model": "deepseek-r1:1.5b",
             "messages": [
