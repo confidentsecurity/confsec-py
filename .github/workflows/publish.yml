@@ -47,9 +47,17 @@ jobs:
     
     - name: Run type checking
       run: uv run mypy confsec/
+
+    - name: Install package locally
+      run: uv pip install .
     
     - name: Build source distribution
       run: uv build --sdist
+
+    - name: Run e2e tests
+      run: uv run pytest tests --e2e
+      env:
+        CONFSEC_API_KEY: ${{ secrets.CONFSEC_API_KEY }}
     
     - name: Publish to Test PyPI
       if: github.event.inputs.pypi_env == 'testpypi' || (github.event_name == 'workflow_dispatch' && github.event.inputs.pypi_env == 'testpypi')
