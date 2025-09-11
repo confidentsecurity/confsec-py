@@ -12,12 +12,15 @@ def pytest_configure(config):
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--e2e"):
-        return
-    skip_e2e = pytest.mark.skip(reason="--e2e was not passed")
+    is_e2e = config.getoption("--e2e")
+
+    def should_skip(item):
+        return "e2e" in item.keywords if not is_e2e else "e2e" not in item.keywords
+
+    skip = pytest.mark.skip(reason=f"--e2e was {'not ' if is_e2e else ''}passed")
     for item in items:
-        if "e2e" in item.keywords:
-            item.add_marker(skip_e2e)
+        if should_skip(item):
+            item.add_marker(skip)
 
 
 @pytest.fixture(scope="session")
