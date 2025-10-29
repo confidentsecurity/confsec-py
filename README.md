@@ -1,4 +1,6 @@
-# CONFSEC Python SDK
+<img width="200" height="auto" alt="Logo - Dark" src="https://github.com/user-attachments/assets/7b520fec-427e-4613-b173-abae8c4cd4c2" />
+
+# Python SDK
 
 ## Overview
 
@@ -122,3 +124,5 @@ with ConfsecClient(api_key=os.environ["CONFSEC_API_KEY"]) as client:
     )
     print(response.json())
 ```
+
+
