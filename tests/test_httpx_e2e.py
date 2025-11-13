@@ -5,8 +5,8 @@ from httpx import SyncByteStream
 
 from confsec.client import ConfsecClient
 
-URL = "http://confsec.invalid/api/generate"
-MODEL = "llama3.2:1b"
+URL = "http://confsec.invalid/v1/completions"
+MODEL = "gpt-oss:20b"
 HEADERS = {
     "Accept": "application/x-ndjson",
     "Content-Type": "application/json",
@@ -16,10 +16,15 @@ PROMPT = "Count to ten in Spanish."
 
 
 @pytest.mark.e2e
-def test_httpx_e2e(api_key, env):
-    with ConfsecClient(
-        api_key=api_key, default_node_tags=[f"model={MODEL}"], env=env
-    ) as client:
+def test_httpx_e2e(env, api_url, api_key):
+    client_kwargs = {
+        "oidc_issuer_regex": "https://token.actions.githubusercontent.com",
+        "oidc_subject_regex": "^https://github.com/confidentsecurity/T/.github/workflows.*",
+        "default_node_tags": [f"model={MODEL}"],
+        "env": env,
+    }
+
+    with ConfsecClient(api_url=api_url, api_key=api_key, **client_kwargs) as client:
         httpx = client.get_http_client()
 
         # Do a non-streaming request.
@@ -29,7 +34,9 @@ def test_httpx_e2e(api_key, env):
             json={"model": MODEL, "prompt": PROMPT, "stream": False},
         )
         assert resp.status_code == 200
-        assert resp.json()["response"]
+        body = resp.json()
+        assert "choices" in body
+        assert len(body["choices"]) > 0
 
         # Do a streaming request.
         with httpx.stream(
@@ -39,7 +46,7 @@ def test_httpx_e2e(api_key, env):
             json={"model": MODEL, "prompt": PROMPT, "stream": True},
         ) as resp:
             assert resp.status_code == 200
-            assert resp.headers["content-type"] == "application/x-ndjson"
+            assert resp.headers["content-type"] == "text/event-stream"
             assert isinstance(resp.stream, SyncByteStream)
 
             body = b""
@@ -51,11 +58,13 @@ def test_httpx_e2e(api_key, env):
                     continue
 
                 for line in lines[:-1]:
-                    if not line:
+                    line = line.decode("utf-8").strip().removeprefix("data: ")
+                    if not line or line == "[DONE]":
                         continue
                     chunk_json = json.loads(line)
-                    assert "response" in chunk_json
-                    chunks.append(chunk_json["response"])
+                    assert "choices" in chunk_json
+                    if len(chunk_json["choices"]) > 0:
+                        chunks.append(chunk_json["choices"][0]["text"])
 
                 body = lines[-1]
 

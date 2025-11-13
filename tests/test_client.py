@@ -3,7 +3,10 @@ import pytest
 from unittest.mock import Mock, patch
 
 from confsec.client.client import ConfsecClient
-from confsec.libconfsec.base import LibConfsecBase, ClientHandle
+from confsec.libconfsec.base import IdentityPolicySource, LibConfsecBase, ClientHandle
+
+API_URL = "https://api.openpcc-example.com"
+API_KEY = "test_api_key"
 
 
 class TestConfsecClientInitialization:
@@ -12,10 +15,22 @@ class TestConfsecClientInitialization:
         mock_handle = Mock(spec=ClientHandle)
         mock_lc.client_create.return_value = mock_handle
 
-        client = ConfsecClient("test_api_key", libconfsec=mock_lc)
+        client = ConfsecClient(API_URL, API_KEY, libconfsec=mock_lc)
 
         assert client._lc is mock_lc
-        mock_lc.client_create.assert_called_once_with("test_api_key", 0, 0, [], "prod")
+        mock_lc.client_create.assert_called_once_with(
+            API_URL,
+            API_KEY,
+            IdentityPolicySource.CONFIGURED,
+            "",
+            "",
+            "",
+            "",
+            0,
+            0,
+            [],
+            "prod",
+        )
 
     @patch("confsec.client.client.get_libconfsec")
     def test_creates_default_libconfsec_when_not_provided(self, mock_get_libconfsec):
@@ -24,7 +39,7 @@ class TestConfsecClientInitialization:
         mock_lc.client_create.return_value = mock_handle
         mock_get_libconfsec.return_value = mock_lc
 
-        client = ConfsecClient("test_api_key")
+        client = ConfsecClient(API_URL, API_KEY)
 
         mock_get_libconfsec.assert_called_once()
         assert client._lc is mock_lc
@@ -35,7 +50,8 @@ class TestConfsecClientInitialization:
         mock_lc.client_create.return_value = mock_handle
 
         _ = ConfsecClient(
-            "test_api_key",
+            API_URL,
+            API_KEY,
             concurrent_requests_target=5,
             max_candidate_nodes=10,
             default_node_tags=["tag1", "tag2"],
@@ -44,7 +60,17 @@ class TestConfsecClientInitialization:
         )
 
         mock_lc.client_create.assert_called_once_with(
-            "test_api_key", 5, 10, ["tag1", "tag2"], "staging"
+            API_URL,
+            API_KEY,
+            IdentityPolicySource.CONFIGURED,
+            "",
+            "",
+            "",
+            "",
+            5,
+            10,
+            ["tag1", "tag2"],
+            "staging",
         )
 
     def test_default_env_is_prod(self):
@@ -52,9 +78,21 @@ class TestConfsecClientInitialization:
         mock_handle = Mock(spec=ClientHandle)
         mock_lc.client_create.return_value = mock_handle
 
-        _ = ConfsecClient("test_api_key", libconfsec=mock_lc)
+        _ = ConfsecClient(API_URL, API_KEY, libconfsec=mock_lc)
 
-        mock_lc.client_create.assert_called_once_with("test_api_key", 0, 0, [], "prod")
+        mock_lc.client_create.assert_called_once_with(
+            API_URL,
+            API_KEY,
+            IdentityPolicySource.CONFIGURED,
+            "",
+            "",
+            "",
+            "",
+            0,
+            0,
+            [],
+            "prod",
+        )
 
 
 class TestWalletStatus:
@@ -70,7 +108,7 @@ class TestWalletStatus:
         }
         mock_lc.client_get_wallet_status.return_value = json.dumps(wallet_data)
 
-        client = ConfsecClient("test_api_key", libconfsec=mock_lc)
+        client = ConfsecClient(API_URL, API_KEY, libconfsec=mock_lc)
         result = client.get_wallet_status()
 
         assert result == wallet_data
@@ -83,7 +121,7 @@ class TestWalletStatus:
         mock_lc.client_create.return_value = mock_handle
         mock_lc.client_get_wallet_status.return_value = "invalid json {"
 
-        client = ConfsecClient("test_api_key", libconfsec=mock_lc)
+        client = ConfsecClient(API_URL, API_KEY, libconfsec=mock_lc)
 
         with pytest.raises(json.JSONDecodeError):
             client.get_wallet_status()
@@ -95,7 +133,7 @@ class TestHttpClient:
         mock_handle = Mock(spec=ClientHandle)
         mock_lc.client_create.return_value = mock_handle
 
-        client = ConfsecClient("test_api_key", libconfsec=mock_lc)
+        client = ConfsecClient(API_URL, API_KEY, libconfsec=mock_lc)
 
         with patch("httpx.Client") as mock_httpx_client, patch(
             "confsec.client._httpx.ConfsecHttpxTransport"
@@ -116,7 +154,7 @@ class TestHttpClient:
         mock_handle = Mock(spec=ClientHandle)
         mock_lc.client_create.return_value = mock_handle
 
-        client = ConfsecClient("test_api_key", libconfsec=mock_lc)
+        client = ConfsecClient(API_URL, API_KEY, libconfsec=mock_lc)
 
         with pytest.raises(AssertionError):
             client.get_http_client("requests")  # type: ignore
@@ -128,7 +166,7 @@ class TestResourceManagement:
         mock_handle = Mock(spec=ClientHandle)
         mock_lc.client_create.return_value = mock_handle
 
-        client = ConfsecClient("test_api_key", libconfsec=mock_lc)
+        client = ConfsecClient(API_URL, API_KEY, libconfsec=mock_lc)
         client.close()
 
         mock_lc.client_destroy.assert_called_once_with(mock_handle)
@@ -138,7 +176,7 @@ class TestResourceManagement:
         mock_handle = Mock(spec=ClientHandle)
         mock_lc.client_create.return_value = mock_handle
 
-        with ConfsecClient("test_api_key", libconfsec=mock_lc) as _:
+        with ConfsecClient(API_URL, API_KEY, libconfsec=mock_lc) as _:
             pass
 
         mock_lc.client_destroy.assert_called_once_with(mock_handle)
@@ -148,7 +186,7 @@ class TestResourceManagement:
         mock_handle = Mock(spec=ClientHandle)
         mock_lc.client_create.return_value = mock_handle
 
-        client = ConfsecClient("test_api_key", libconfsec=mock_lc)
+        client = ConfsecClient(API_URL, API_KEY, libconfsec=mock_lc)
         client.close()
         client.close()  # Should not raise
 

@@ -36,3 +36,15 @@ def env():
     if _env is None:
         _env = "prod"
     return _env
+
+
+@pytest.fixture(scope="session")
+def api_url(env):
+    if env == "prod":
+        return "https://app.confident.security"
+    if env == "staging":
+        return "https://app.staging.confident.security"
+    if env == "dev":
+        return "http://localhost:3000"
+
+    raise ValueError(f"Unknown env: {env}")

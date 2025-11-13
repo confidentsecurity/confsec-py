@@ -7,10 +7,10 @@ import pytest
 from confsec.client import ConfsecClient, Response
 
 
-URL = "http://confsec.invalid/api/generate"
-MODEL = "llama3.2:1b"
+URL = "http://confsec.invalid/v1/completions"
+API_URL = "https://app.confident.security"
+MODEL = "gpt-oss:20b"
 HEADERS = {
-    "Accept": "application/x-ndjson",
     "Content-Type": "application/json",
     "X-Confsec-Node-Tags": f"model={MODEL}",
 }
@@ -42,15 +42,22 @@ def request(method: str, url: str, headers: dict[str, str], body: bytes) -> byte
 
 
 @pytest.mark.e2e
-def test_client_e2e(api_key, env):
+def test_client_e2e(env, api_url, api_key):
     def get_content_type(resp: Response) -> str:
         return [
-            h["value"] for h in resp.metadata["headers"] if h["key"] == "Content-Type"
+            h["value"]
+            for h in resp.metadata["headers"]
+            if h["key"].lower() == "content-type"
         ][0]
 
-    with ConfsecClient(
-        api_key=api_key, default_node_tags=[f"model={MODEL}"], env=env
-    ) as client:
+    client_kwargs = {
+        "oidc_issuer_regex": "https://token.actions.githubusercontent.com",
+        "oidc_subject_regex": "^https://github.com/confidentsecurity/T/.github/workflows.*",
+        "default_node_tags": [f"model={MODEL}"],
+        "env": env,
+    }
+
+    with ConfsecClient(api_url=api_url, api_key=api_key, **client_kwargs) as client:
         # Check configs
         initial_credit_amount = client.default_credit_amount_per_request
         assert initial_credit_amount > 0
@@ -61,12 +68,15 @@ def test_client_e2e(api_key, env):
         # Do a non-streaming request
         req = request("POST", URL, HEADERS, get_body(PROMPT))
         with client.do_request(req) as resp:
+            # import pdb
+
+            # pdb.set_trace()
             content_type = get_content_type(resp)
             body = json.loads(resp.body)
             assert "application/json" in content_type
             assert resp.metadata["status_code"] == 200
-            assert "response" in body
-            assert len(body["response"]) > 0
+            assert "choices" in body
+            assert len(body["choices"]) > 0
 
         # Do a streaming request
         body = b""
@@ -74,7 +84,7 @@ def test_client_e2e(api_key, env):
         req = request("POST", URL, HEADERS, get_body(PROMPT, stream=True))
         with client.do_request(req) as resp:
             content_type = get_content_type(resp)
-            assert content_type == "application/x-ndjson"
+            assert content_type == "text/event-stream"
             assert resp.metadata["status_code"] == 200
             with resp.get_stream() as stream:
                 for chunk in stream:
@@ -83,11 +93,13 @@ def test_client_e2e(api_key, env):
                     if len(lines) <= 1:
                         continue
                     for line in lines[:-1]:
-                        if not line:
+                        line = line.decode("utf-8").strip().removeprefix("data: ")
+                        if not line or line == "[DONE]":
                             continue
                         chunk_json = json.loads(line)
-                        assert "response" in chunk_json
-                        chunks.append(chunk_json["response"])
+                        assert "choices" in chunk_json
+                        if len(chunk_json["choices"]) > 0:
+                            chunks.append(chunk_json["choices"][0]["text"])
 
                     body = lines[-1]
 

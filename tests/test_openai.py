@@ -5,6 +5,9 @@ from unittest.mock import Mock, patch
 from confsec.openai import OpenAI
 from confsec.client.client import ConfsecClient
 
+API_URL = "https://api.openpcc-example.com"
+API_KEY = "test_api_key"
+
 
 @pytest.fixture
 def mock_dependencies():
@@ -35,11 +38,13 @@ class TestOpenAIInitialization:
     def test_with_explicit_api_key(self, mock_dependencies):
         mocks = mock_dependencies
 
-        openai_client = OpenAI(api_key="test_api_key")
+        openai_client = OpenAI(api_key=API_KEY, confsec_config={"api_url": API_URL})
 
-        mocks["mock_confsec_client"].assert_called_once_with(api_key="test_api_key")
+        mocks["mock_confsec_client"].assert_called_once_with(
+            api_url=API_URL, api_key=API_KEY
+        )
         mocks["mock_openai"].assert_called_once_with(
-            api_key="test_api_key",
+            api_key=API_KEY,
             base_url="http://confsec.invalid/v1",
             http_client=mocks["mock_http_client"],
         )
@@ -50,9 +55,11 @@ class TestOpenAIInitialization:
         mocks = mock_dependencies
 
         with patch.dict(os.environ, {"CONFSEC_API_KEY": "env_api_key"}):
-            _ = OpenAI()
+            _ = OpenAI(confsec_config={"api_url": API_URL})
 
-            mocks["mock_confsec_client"].assert_called_once_with(api_key="env_api_key")
+            mocks["mock_confsec_client"].assert_called_once_with(
+                api_url=API_URL, api_key="env_api_key"
+            )
             mocks["mock_openai"].assert_called_once_with(
                 api_key="env_api_key",
                 base_url="http://confsec.invalid/v1",
@@ -65,13 +72,19 @@ class TestOpenAIInitialization:
             with pytest.raises(KeyError, match="CONFSEC_API_KEY"):
                 OpenAI()
 
+    def test_missing_api_url_raises_value_error(self):
+        with pytest.raises(ValueError, match="api_url"):
+            OpenAI()
+
     def test_explicit_api_key_overrides_environment(self, mock_dependencies):
         mocks = mock_dependencies
 
         with patch.dict(os.environ, {"CONFSEC_API_KEY": "env_api_key"}):
-            _ = OpenAI(api_key="explicit_key")
+            _ = OpenAI(api_key="explicit_key", confsec_config={"api_url": API_URL})
 
-            mocks["mock_confsec_client"].assert_called_once_with(api_key="explicit_key")
+            mocks["mock_confsec_client"].assert_called_once_with(
+                api_url=API_URL, api_key="explicit_key"
+            )
             mocks["mock_openai"].assert_called_once_with(
                 api_key="explicit_key",
                 base_url="http://confsec.invalid/v1",
@@ -83,7 +96,7 @@ class TestResourceManagement:
     def test_close_calls_confsec_client_close(self, mock_dependencies):
         mocks = mock_dependencies
 
-        openai_client = OpenAI(api_key="test_key")
+        openai_client = OpenAI(api_key=API_KEY, confsec_config={"api_url": API_URL})
         openai_client.close()
 
         mocks["mock_client_instance"].close.assert_called_once()
@@ -91,7 +104,7 @@ class TestResourceManagement:
     def test_context_manager_calls_close(self, mock_dependencies):
         mocks = mock_dependencies
 
-        with OpenAI(api_key="test_key") as _:
+        with OpenAI(api_key=API_KEY, confsec_config={"api_url": API_URL}) as _:
             pass
 
         mocks["mock_client_instance"].close.assert_called_once()
@@ -101,35 +114,26 @@ class TestConfsecClientProperty:
     def test_confsec_client_property_returns_client_instance(self, mock_dependencies):
         mocks = mock_dependencies
 
-        openai_client = OpenAI(api_key="test_key")
+        openai_client = OpenAI(api_key=API_KEY, confsec_config={"api_url": API_URL})
 
         assert openai_client.confsec_client is mocks["mock_client_instance"]
 
 
 class TestConfigurationEdgeCases:
-    def test_empty_config_vs_none(self, mock_dependencies):
-        mocks = mock_dependencies
-
-        # Test with None config
-        _ = OpenAI(api_key="test_key", confsec_config=None)
-        # Test with empty dict config
-        _ = OpenAI(api_key="test_key", confsec_config={})
-
-        # Both should result in the same call to ConfsecClient
-        # Both calls should pass only the api_key parameter
-        assert mocks["mock_confsec_client"].call_count == 2
-        for call in mocks["mock_confsec_client"].call_args_list:
-            assert call == ((), {"api_key": "test_key"})
-
     def test_partial_config(self, mock_dependencies):
         mocks = mock_dependencies
 
-        partial_config = {"concurrent_requests_target": 5, "env": "staging"}
+        partial_config = {
+            "api_url": API_URL,
+            "concurrent_requests_target": 5,
+            "env": "staging",
+        }
 
-        _ = OpenAI(api_key="test_key", confsec_config=partial_config)  # type: ignore
+        _ = OpenAI(api_key=API_KEY, confsec_config=partial_config)  # type: ignore
 
         mocks["mock_confsec_client"].assert_called_once_with(
-            api_key="test_key",
+            api_url=API_URL,
+            api_key=API_KEY,
             concurrent_requests_target=5,
             env="staging",
         )
