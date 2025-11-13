@@ -1,20 +1,38 @@
 from __future__ import annotations
 
-from .base import LibConfsecBase, ClientHandle, ResponseHandle, ResponseStreamHandle
+from .base import (
+    ClientHandle,
+    IdentityPolicySource,
+    LibConfsecBase,
+    ResponseHandle,
+    ResponseStreamHandle,
+)
 from . import libconfsec_py as lcp  # type: ignore[attr-defined]
 
 
 class LibConfsec(LibConfsecBase):
     def client_create(
         self,
+        api_url: str,
         api_key: str,
+        identity_policy_source: IdentityPolicySource,
+        oidc_issuer: str,
+        oidc_issuer_regex: str,
+        oidc_subject: str,
+        oidc_subject_regex: str,
         concurrent_requests_target: int,
         max_candidate_nodes: int,
         default_node_tags: list[str] | None,
         env: str,
     ) -> int:
         return lcp.confsec_client_create(
+            api_url,
             api_key,
+            identity_policy_source,
+            oidc_issuer,
+            oidc_issuer_regex,
+            oidc_subject,
+            oidc_subject_regex,
             concurrent_requests_target,
             max_candidate_nodes,
             default_node_tags,

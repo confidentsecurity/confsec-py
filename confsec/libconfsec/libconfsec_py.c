@@ -16,7 +16,13 @@
 
 static PyObject* py_confsec_client_create(PyObject* self, PyObject* args) {
     INIT_ERROR;
+    char* api_url;
     char* api_key;
+    int identity_policy_source;
+    char* oidc_issuer;
+    char* oidc_issuer_regex;
+    char* oidc_subject;
+    char* oidc_subject_regex;
     int concurrent_requests_target;
     int max_candidate_nodes;
     PyObject* py_default_node_tags;
@@ -25,7 +31,19 @@ static PyObject* py_confsec_client_create(PyObject* self, PyObject* args) {
     char* env;
     uintptr_t handle;
 
-    if (!PyArg_ParseTuple(args, "siiOz", &api_key, &concurrent_requests_target, &max_candidate_nodes, &py_default_node_tags, &env)) {
+    if (!PyArg_ParseTuple(args,
+                          "ssissssiiOz",
+                          &api_url,
+                          &api_key,
+                          &identity_policy_source,
+                          &oidc_issuer,
+                          &oidc_issuer_regex,
+                          &oidc_subject,
+                          &oidc_subject_regex,
+                          &concurrent_requests_target,
+                          &max_candidate_nodes,
+                          &py_default_node_tags,
+                          &env)) {
         return NULL;
     }
 
@@ -51,7 +69,13 @@ static PyObject* py_confsec_client_create(PyObject* self, PyObject* args) {
         }
     }
 
-    handle = Confsec_ClientCreate(api_key,
+    handle = Confsec_ClientCreate(api_url,
+                                  api_key,
+                                  identity_policy_source,
+                                  oidc_issuer,
+                                  oidc_issuer_regex,
+                                  oidc_subject,
+                                  oidc_subject_regex,
                                   concurrent_requests_target,
                                   max_candidate_nodes,
                                   (char**)default_node_tags,

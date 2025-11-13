@@ -5,7 +5,7 @@ from typing import Literal, TYPE_CHECKING, TypedDict
 
 from .response import Response
 from ..closeable import Closeable
-from ..libconfsec.base import LibConfsecBase, ClientHandle
+from ..libconfsec.base import IdentityPolicySource, LibConfsecBase, ClientHandle
 
 if TYPE_CHECKING:
     from httpx import Client as HttpxClient
@@ -34,7 +34,13 @@ class ConfsecClient(Closeable):
 
     def __init__(
         self,
+        api_url: str,
         api_key: str,
+        identity_policy_source: IdentityPolicySource = IdentityPolicySource.CONFIGURED,
+        oidc_issuer: str = "",
+        oidc_issuer_regex: str = "",
+        oidc_subject: str = "",
+        oidc_subject_regex: str = "",
         concurrent_requests_target: int = 0,
         max_candidate_nodes: int = 0,
         default_node_tags: list[str] | None = None,
@@ -54,7 +60,13 @@ class ConfsecClient(Closeable):
         self._lc: LibConfsecBase = lc
 
         self._handle: ClientHandle = self._lc.client_create(
+            api_url,
             api_key,
+            identity_policy_source,
+            oidc_issuer,
+            oidc_issuer_regex,
+            oidc_subject,
+            oidc_subject_regex,
             concurrent_requests_target,
             max_candidate_nodes,
             default_node_tags or [],

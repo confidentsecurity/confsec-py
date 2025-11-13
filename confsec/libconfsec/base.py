@@ -1,6 +1,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from enum import IntEnum
+
+
+class IdentityPolicySource(IntEnum):
+    CONFIGURED = 0
+    UNSAFE_REMOTE = 1
+
 
 ClientHandle = int
 ResponseHandle = int
@@ -15,7 +22,13 @@ class LibConfsecBase(ABC):
     @abstractmethod
     def client_create(
         self,
+        api_url: str,
         api_key: str,
+        identity_policy_source: IdentityPolicySource,
+        oidc_issuer: str,
+        oidc_issuer_regex: str,
+        oidc_subject: str,
+        oidc_subject_regex: str,
         concurrent_requests_target: int,
         max_candidate_nodes: int,
         default_node_tags: list[str] | None,
@@ -25,7 +38,13 @@ class LibConfsecBase(ABC):
         Create a new client.
 
         Args:
+            api_url (str): The auth API URL to use.
             api_key (str): The API key to use for authentication.
+            identity_policy_source (IdentityPolicySource): The identity policy source.
+            oidc_issuer (str): The OIDC issuer.
+            oidc_issuer_regex (str): The OIDC issuer regex.
+            oidc_subject (str): The OIDC subject.
+            oidc_subject_regex (str): The OIDC subject regex.
             concurrent_requests_target (int): The target number of concurrent requests.
             max_candidate_nodes (int): The maximum number of candidate nodes.
             default_node_tags (list[str] | None): The default node tags.

@@ -10,11 +10,18 @@ from openai.resources.completions import Completions
 
 from .client import ConfsecClient
 from .closeable import Closeable
+from .libconfsec.base import IdentityPolicySource
 
 _BASE_URL = "http://confsec.invalid/v1"
 
 
 class ConfsecConfig(TypedDict):
+    api_url: NotRequired[str]
+    identity_policy_source: NotRequired[IdentityPolicySource]
+    oidc_issuer: NotRequired[str]
+    oidc_issuer_regex: NotRequired[str]
+    oidc_subject: NotRequired[str]
+    oidc_subject_regex: NotRequired[str]
     concurrent_requests_target: NotRequired[int]
     max_candidate_nodes: NotRequired[int]
     default_node_tags: NotRequired[list[str]]
@@ -46,6 +53,9 @@ class OpenAI(Closeable):
 
         if confsec_config is None:
             confsec_config = {}
+
+        if confsec_config.get("api_url") is None:
+            raise ValueError("api_url is required for confsec_config")
 
         self._confsec_client = ConfsecClient(api_key=api_key, **confsec_config)
         self._openai_client = _OpenAI(
