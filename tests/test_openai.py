@@ -74,7 +74,7 @@ class TestOpenAIInitialization:
 
     def test_missing_api_url_raises_value_error(self):
         with pytest.raises(ValueError, match="api_url"):
-            OpenAI()
+            OpenAI(api_key=API_KEY)
 
     def test_explicit_api_key_overrides_environment(self, mock_dependencies):
         mocks = mock_dependencies
