@@ -23,7 +23,11 @@ Use our OpenAI wrapper as a drop-in replacement for existing OpenAI clients:
 ```python
 # Use OpenAI wrapper
 from confsec.openai import OpenAI
-client = OpenAI()
+client = OpenAI(confsec_config={
+    "api_url": "https://app.confident.security",
+    "oidc_issuer": "https://token.actions.githubusercontent.com",
+    "oidc_subject": "^https://github.com/confidentsecurity/T/.github/workflows.*",
+})
 ```
 
 Or, for lower-level access, use the CONFSEC-enabled HTTP client directly:
@@ -33,7 +37,12 @@ Or, for lower-level access, use the CONFSEC-enabled HTTP client directly:
 import os
 from confsec import ConfsecClient
 
-with ConfsecClient(api_key=os.environ["CONFSEC_API_KEY"]) as client:
+with ConfsecClient(
+    api_url="https://app.confident.security",
+    api_key=os.environ["CONFSEC_API_KEY"],
+    oidc_issuer="https://token.actions.githubusercontent.com",
+    oidc_subject="^https://github.com/confidentsecurity/T/.github/workflows.*",
+) as client:
     http = client.get_http_client()
 ```
 
@@ -43,6 +52,26 @@ We aim to make the SDK as config-free as possible. However, there are some
 parameters you can optionally configure to control how the client interacts
 with the CONFSEC backend:
 
+- `api_url (str)`: The URL for the service implementing the OpenPCC auth API.
+- `identity_policy_source (int)`: Accepts values from the `IdentityPolicySource`
+  enum. Controls the source of the identity policy that the client uses to
+  validate the signing identity of artifacts in the OpenPCC transparency log. By
+  default `IdentityPolicySource.CONFIGURED` is used, which requires the caller
+  to configure at least one of `oidc_issuer` or `oidc_issuer_regex`, and at least
+  one of `oidc_subject` or `oidc_subject_regex`. Alternatively, the caller could set
+  this as `IdentityPolicySource.UNSAFE_REMOTE`, which allows the client to
+  receive and trust the identity policy from the auth server. This is unsafe and
+  should only be used in development environments.
+- `oidc_issuer (str)`: The OIDC issuer to trust for OpenPCC transparency log
+  artifacts.
+- `oidc_issuer_regex (str)`: A regular expression matching the OIDC issuers to
+  trust for OpenPCC transparency log artifacts. Can be used in place of
+  `oidc_issuer` to trust multiple issuers.
+- `oidc_subject (str)`: The OIDC subject to trust for OpenPCC transparency log
+  artifacts.
+- `oidcSubject_Regex (str)`: A regular expression matching the OIDC subjects to
+  trust for OpenPCC transparency log artifacts. Can be used in place of
+  `oidc_subject` to trust multiple subjects.
 - `concurrent_requests_target (int)`: Allows the client to specify the desired
   request parallelism. This primarily impacts the number of credits that the
   client will maintain cached and available to use immediately. Higher values
@@ -75,7 +104,11 @@ Currently, the following subset of APIs are supported:
 
 ```python
 import os
-client = OpenAI()
+client = OpenAI(confsec_config={
+    "api_url": "https://app.confident.security",
+    "oidc_issuer": "https://token.actions.githubusercontent.com",
+    "oidc_subject": "^https://github.com/confidentsecurity/T/.github/workflows.*",
+})
 
 stream = client.chat.completions.create(
     model="deepseek-r1:1.5b",
@@ -109,7 +142,12 @@ manager. Failure to do so may result in credits being lost.
 import os
 from confsec import ConfsecClient
 
-with ConfsecClient(api_key=os.environ["CONFSEC_API_KEY"]) as client:
+with ConfsecClient(
+    api_url="https://app.confident.security",
+    api_key=os.environ["CONFSEC_API_KEY"],
+    oidc_issuer="https://token.actions.githubusercontent.com",
+    oidc_subject="^https://github.com/confidentsecurity/T/.github/workflows.*",
+) as client:
     http = client.get_http_client()
     response = http.request(
         "POST",
