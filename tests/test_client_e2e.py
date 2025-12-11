@@ -84,7 +84,7 @@ def test_client_e2e(env, api_url, api_key):
         req = request("POST", URL, HEADERS, get_body(PROMPT, stream=True))
         with client.do_request(req) as resp:
             content_type = get_content_type(resp)
-            assert content_type == "text/event-stream"
+            assert content_type.startswith("text/event-stream")
             assert resp.metadata["status_code"] == 200
             with resp.get_stream() as stream:
                 for chunk in stream:

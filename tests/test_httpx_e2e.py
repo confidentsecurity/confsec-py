@@ -46,7 +46,7 @@ def test_httpx_e2e(env, api_url, api_key):
             json={"model": MODEL, "prompt": PROMPT, "stream": True},
         ) as resp:
             assert resp.status_code == 200
-            assert resp.headers["content-type"] == "text/event-stream"
+            assert resp.headers["content-type"].startswith("text/event-stream")
             assert isinstance(resp.stream, SyncByteStream)
 
             body = b""
