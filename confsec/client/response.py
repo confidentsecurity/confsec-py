@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from functools import cached_property
-from typing import Iterator, TypedDict
+from typing import AsyncIterator, Iterator, TypedDict
 
 from ..closeable import Closeable
 from ..libconfsec.base import LibConfsecBase, ResponseHandle, ResponseStreamHandle
@@ -59,6 +60,26 @@ class ResponseStream(Closeable):
         if not data:
             raise StopIteration
         return data
+
+    def __aiter__(self) -> AsyncIterator[bytes]:
+        return self
+
+    async def __anext__(self) -> bytes:
+        loop = asyncio.get_event_loop()
+
+        # We need to wrap get_next in a function that returns None instead of raising
+        # StopIteration because StopIteration doesn't propagate well through
+        # run_in_executor.
+        def get_chunk():
+            try:
+                return self.get_next()
+            except StopIteration:
+                return None
+
+        chunk = await loop.run_in_executor(None, get_chunk)
+        if not chunk:
+            raise StopAsyncIteration
+        return chunk
 
     def __del__(self):
         self.close()

@@ -1,7 +1,15 @@
+import asyncio
 import json
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, AsyncIterator, Iterator
 
-from httpx import BaseTransport, Request, Response as HttpxResponse, SyncByteStream
+from httpx import (
+    AsyncByteStream,
+    AsyncHTTPTransport,
+    BaseTransport,
+    Request,
+    Response as HttpxResponse,
+    SyncByteStream,
+)
 
 from .response import ResponseStream
 
@@ -36,35 +44,11 @@ class ConfsecHttpxSyncByteStream(SyncByteStream):
         self._stream.close()
 
 
-class ConfsecHttpxTransport(BaseTransport):
+class _BaseHttpxTransport:
+    """Shared logic for sync and async transports."""
+
     _openai_completions_path = "/v1/completions"
     _openai_chat_completions_path = "/v1/chat/completions"
-
-    def __init__(self, client: "ConfsecClient") -> None:
-        self._client = client
-
-    def handle_request(self, request: Request) -> HttpxResponse:
-        request = self._preprocess_request(request)
-
-        req_bytes = prepare_request(request)
-        confsec_resp = self._client.do_request(req_bytes)
-        resp_metadata = confsec_resp.metadata
-        headers = [(h["key"], h["value"]) for h in resp_metadata["headers"]]
-
-        body, stream = None, None
-        if confsec_resp.is_streaming:
-            stream = ConfsecHttpxSyncByteStream(confsec_resp.get_stream())
-        else:
-            body = confsec_resp.body
-            confsec_resp.close()
-
-        return HttpxResponse(
-            status_code=resp_metadata["status_code"],
-            headers=headers,
-            content=body,
-            stream=stream,
-            request=request,
-        )
 
     def _preprocess_request(self, request: Request) -> Request:
         if request.url.path == self._openai_completions_path:
@@ -99,3 +83,78 @@ class ConfsecHttpxTransport(BaseTransport):
 
         request.headers["X-Confsec-Node-Tags"] = header
         return request
+
+
+class ConfsecHttpxTransport(_BaseHttpxTransport, BaseTransport):
+    def __init__(self, client: "ConfsecClient") -> None:
+        self._client = client
+
+    def handle_request(self, request: Request) -> HttpxResponse:
+        request = self._preprocess_request(request)
+
+        req_bytes = prepare_request(request)
+        confsec_resp = self._client.do_request(req_bytes)
+        resp_metadata = confsec_resp.metadata
+        headers = [(h["key"], h["value"]) for h in resp_metadata["headers"]]
+
+        body, stream = None, None
+        if confsec_resp.is_streaming:
+            stream = ConfsecHttpxSyncByteStream(confsec_resp.get_stream())
+        else:
+            body = confsec_resp.body
+            confsec_resp.close()
+
+        return HttpxResponse(
+            status_code=resp_metadata["status_code"],
+            headers=headers,
+            content=body,
+            stream=stream,
+            request=request,
+        )
+
+
+class ConfsecHttpxAsyncByteStream(AsyncByteStream):
+    def __init__(self, stream: ResponseStream) -> None:
+        self._stream = stream
+
+    def __aiter__(self) -> AsyncIterator[bytes]:
+        return self._stream.__aiter__()
+
+    async def aclose(self) -> None:
+        self._stream.close()
+
+
+class ConfsecHttpxAsyncTransport(_BaseHttpxTransport, AsyncHTTPTransport):
+    def __init__(self, client: "ConfsecClient") -> None:
+        self._client = client
+
+    async def handle_async_request(self, request: Request) -> HttpxResponse:
+        request = self._preprocess_request(request)
+
+        req_bytes = prepare_request(request)
+
+        # Run blocking FFI call in thread pool executor
+        # The C code releases the GIL during network I/O
+        loop = asyncio.get_event_loop()
+        confsec_resp = await loop.run_in_executor(
+            None, self._client.do_request, req_bytes
+        )
+
+        resp_metadata = confsec_resp.metadata
+        headers = [(h["key"], h["value"]) for h in resp_metadata["headers"]]
+
+        body, stream = None, None
+        if confsec_resp.is_streaming:
+            stream = ConfsecHttpxAsyncByteStream(confsec_resp.get_stream())
+        else:
+            # Run blocking body read in executor (C code releases GIL)
+            body = await loop.run_in_executor(None, lambda: confsec_resp.body)
+            await loop.run_in_executor(None, confsec_resp.close)
+
+        return HttpxResponse(
+            status_code=resp_metadata["status_code"],
+            headers=headers,
+            content=body,
+            stream=stream,
+            request=request,
+        )
