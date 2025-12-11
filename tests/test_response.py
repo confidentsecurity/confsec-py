@@ -206,3 +206,101 @@ class TestResponseStream:
 
         # Stream should still hold the reference
         assert stream._resp is not None
+
+    # Async iteration tests
+    def test_aiter_returns_self(self):
+        mock_lc = Mock(spec=LibConfsecBase)
+        mock_response = Mock(spec=Response)
+        mock_handle = Mock(spec=ResponseStreamHandle)
+
+        stream = ResponseStream(mock_lc, mock_response, mock_handle)
+
+        assert stream.__aiter__() is stream
+
+    @pytest.mark.asyncio
+    async def test_anext_calls_get_next_in_executor_and_returns_data(self):
+        mock_lc = Mock(spec=LibConfsecBase)
+        mock_response = Mock(spec=Response)
+        mock_handle = Mock(spec=ResponseStreamHandle)
+        mock_lc.response_stream_get_next.return_value = b"test data"
+
+        stream = ResponseStream(mock_lc, mock_response, mock_handle)
+        result = await stream.__anext__()
+
+        assert result == b"test data"
+        mock_lc.response_stream_get_next.assert_called_once_with(mock_handle)
+
+    @pytest.mark.asyncio
+    async def test_anext_raises_stop_async_iteration_on_empty_data(self):
+        mock_lc = Mock(spec=LibConfsecBase)
+        mock_response = Mock(spec=Response)
+        mock_handle = Mock(spec=ResponseStreamHandle)
+        mock_lc.response_stream_get_next.return_value = b""
+
+        stream = ResponseStream(mock_lc, mock_response, mock_handle)
+
+        with pytest.raises(StopAsyncIteration):
+            await stream.__anext__()
+
+    @pytest.mark.asyncio
+    async def test_anext_converts_stop_iteration_to_stop_async_iteration(self):
+        mock_lc = Mock(spec=LibConfsecBase)
+        mock_response = Mock(spec=Response)
+        mock_handle = Mock(spec=ResponseStreamHandle)
+        # Simulate C code raising StopIteration when stream ends
+        mock_lc.response_stream_get_next.side_effect = StopIteration("No more chunks")
+
+        stream = ResponseStream(mock_lc, mock_response, mock_handle)
+
+        with pytest.raises(StopAsyncIteration):
+            await stream.__anext__()
+
+    @pytest.mark.asyncio
+    async def test_async_for_loop_iteration(self):
+        mock_lc = Mock(spec=LibConfsecBase)
+        mock_response = Mock(spec=Response)
+        mock_handle = Mock(spec=ResponseStreamHandle)
+
+        # Simulate streaming data then ending
+        mock_lc.response_stream_get_next.side_effect = [
+            b"chunk1",
+            b"chunk2",
+            b"chunk3",
+            b"",  # End of stream
+        ]
+
+        stream = ResponseStream(mock_lc, mock_response, mock_handle)
+        chunks = []
+        async for chunk in stream:
+            chunks.append(chunk)
+
+        assert chunks == [b"chunk1", b"chunk2", b"chunk3"]
+        assert mock_lc.response_stream_get_next.call_count == 4
+
+    @pytest.mark.asyncio
+    async def test_async_iteration_with_stop_iteration_exception(self):
+        mock_lc = Mock(spec=LibConfsecBase)
+        mock_response = Mock(spec=Response)
+        mock_handle = Mock(spec=ResponseStreamHandle)
+
+        # Simulate streaming data then raising StopIteration
+        call_count = [0]
+
+        def side_effect_func(handle):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return b"chunk1"
+            elif call_count[0] == 2:
+                return b"chunk2"
+            else:
+                raise StopIteration("Stream ended")
+
+        mock_lc.response_stream_get_next.side_effect = side_effect_func
+
+        stream = ResponseStream(mock_lc, mock_response, mock_handle)
+        chunks = []
+        async for chunk in stream:
+            chunks.append(chunk)
+
+        assert chunks == [b"chunk1", b"chunk2"]
+        assert call_count[0] == 3
