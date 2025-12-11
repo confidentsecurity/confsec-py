@@ -111,7 +111,7 @@ client = OpenAI(confsec_config={
 })
 
 stream = client.chat.completions.create(
-    model="deepseek-r1:1.5b",
+    model="gemma3:1b",
     messages=[
         {
             "role": "user",
@@ -124,6 +124,29 @@ for chunk in stream:
     print(chunk.choices[0].delta.content, end="")
 
 client.close()
+```
+
+For async usage, use the `AsyncOpenAI` class:
+
+```python
+from confsec.openai import AsyncOpenAI
+
+async def main():
+    client = AsyncOpenAI(confsec_config={
+        "api_url": "https://app.confident.security",
+        "oidc_issuer_regex": "https://token.actions.githubusercontent.com",
+        "oidc_subject_regex": "^https://github.com/confidentsecurity/T/.github/workflows.*",
+    })
+
+    stream = await client.chat.completions.create(
+        model="gemma3:1b",
+        messages=[{"role": "user", "content": "What is the meaning of life?"}],
+        stream=True,
+    )
+    async for chunk in stream:
+        print(chunk.choices[0].delta.content, end="")
+
+    client.close()
 ```
 
 ### HTTP Client
@@ -154,13 +177,40 @@ with ConfsecClient(
         # Important: the base URL must be set to "https://confsec.invalid"
         "https://confsec.invalid/v1/chat/completions",
         json={
-            "model": "deepseek-r1:1.5b",
+            "model": "gemma3:1b",
             "messages": [
                 {"role": "user", "content": "What is the meaning of life?"}
             ]
         }
     )
     print(response.json())
+```
+
+For async usage, use `get_async_http_client`:
+
+```python
+import os
+from confsec import ConfsecClient
+
+async def main():
+    with ConfsecClient(
+        api_url="https://app.confident.security",
+        api_key=os.environ["CONFSEC_API_KEY"],
+        oidc_issuer_regex="https://token.actions.githubusercontent.com",
+        oidc_subject_regex="^https://github.com/confidentsecurity/T/.github/workflows.*",
+    ) as client:
+        http = client.get_async_http_client()
+        response = await http.request(
+            "POST",
+            "https://confsec.invalid/v1/chat/completions",
+            json={
+                "model": "gemma3:1b",
+                "messages": [
+                    {"role": "user", "content": "What is the meaning of life?"}
+                ]
+            }
+        )
+        print(response.json())
 ```
 
 

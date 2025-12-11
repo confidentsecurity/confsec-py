@@ -1,8 +1,11 @@
-from unittest.mock import Mock, patch
+import pytest
+from unittest.mock import AsyncMock, Mock, patch
 from httpx import Request, URL
 
 from confsec.client._httpx import (
     prepare_request,
+    ConfsecHttpxAsyncByteStream,
+    ConfsecHttpxAsyncTransport,
     ConfsecHttpxSyncByteStream,
     ConfsecHttpxTransport,
 )
@@ -150,10 +153,91 @@ class TestConfsecHttpxTransport:
             assert result is request
 
 
-class TestModelTagInjection:
-    def test_maybe_add_model_tag_valid_json_with_model(self):
+class TestConfsecHttpxAsyncByteStream:
+    def test_aiter_delegates_to_stream(self):
+        # Verify that __aiter__ delegates to the underlying stream
+        mock_stream = AsyncMock(spec=ResponseStream)
+        byte_stream = ConfsecHttpxAsyncByteStream(mock_stream)
+
+        _ = byte_stream.__aiter__()
+
+        mock_stream.__aiter__.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_aclose_calls_underlying_stream_close(self):
+        mock_stream = Mock(spec=ResponseStream)
+        byte_stream = ConfsecHttpxAsyncByteStream(mock_stream)
+
+        await byte_stream.aclose()
+
+        mock_stream.close.assert_called_once()
+
+
+class TestConfsecHttpxAsyncTransport:
+    @pytest.mark.asyncio
+    async def test_handle_async_request_non_streaming_response(self):
         mock_client = Mock()
-        transport = ConfsecHttpxTransport(mock_client)
+        mock_response = Mock(spec=Response)
+        mock_response.metadata = {
+            "status_code": 200,
+            "headers": [{"key": "Content-Type", "value": "application/json"}],
+        }
+        mock_response.is_streaming = False
+        mock_response.body = b'{"result": "success"}'
+        mock_client.do_request.return_value = mock_response
+
+        transport = ConfsecHttpxAsyncTransport(mock_client)
+        url = URL("https://api.example.com/test")
+        request = Request("POST", url, content=b'{"test": "data"}')
+
+        result = await transport.handle_async_request(request)
+
+        assert result.status_code == 200
+        assert result.content == b'{"result": "success"}'
+        assert ("content-type", "application/json") in result.headers.items()
+        mock_response.close.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_handle_async_request_streaming_response(self):
+        mock_client = Mock()
+        mock_response = Mock(spec=Response)
+        mock_stream = AsyncMock(spec=ResponseStream)
+        mock_response.metadata = {
+            "status_code": 200,
+            "headers": [{"key": "Content-Type", "value": "text/event-stream"}],
+        }
+        mock_response.is_streaming = True
+        mock_response.get_stream.return_value = mock_stream
+        mock_client.do_request.return_value = mock_response
+
+        transport = ConfsecHttpxAsyncTransport(mock_client)
+        url = URL("https://api.example.com/test")
+        request = Request("POST", url, content=b'{"test": "data"}')
+
+        result = await transport.handle_async_request(request)
+
+        assert result.status_code == 200
+        assert isinstance(result.stream, ConfsecHttpxAsyncByteStream)
+        assert result.stream._stream is mock_stream
+        mock_response.close.assert_not_called()
+
+
+@pytest.fixture(
+    params=[
+        ("sync", ConfsecHttpxTransport),
+        ("async", ConfsecHttpxAsyncTransport),
+    ]
+)
+def transport_class(request):
+    """Fixture that provides both sync and async transport classes."""
+    return request.param
+
+
+class TestModelTagInjection:
+    def test_maybe_add_model_tag_valid_json_with_model(self, transport_class):
+        _, TransportClass = transport_class
+        mock_client = Mock()
+        transport = TransportClass(mock_client)
 
         url = URL("https://api.openai.com/v1/completions")
         request = Request(
@@ -164,9 +248,10 @@ class TestModelTagInjection:
 
         assert result.headers["X-Confsec-Node-Tags"] == "model=gpt-3.5-turbo"
 
-    def test_maybe_add_model_tag_invalid_json(self):
+    def test_maybe_add_model_tag_invalid_json(self, transport_class):
+        _, TransportClass = transport_class
         mock_client = Mock()
-        transport = ConfsecHttpxTransport(mock_client)
+        transport = TransportClass(mock_client)
 
         url = URL("https://api.openai.com/v1/completions")
         request = Request("POST", url, content=b"invalid json {")
@@ -176,9 +261,10 @@ class TestModelTagInjection:
         assert result is request
         assert "X-Confsec-Node-Tags" not in result.headers
 
-    def test_maybe_add_model_tag_missing_model_field(self):
+    def test_maybe_add_model_tag_missing_model_field(self, transport_class):
+        _, TransportClass = transport_class
         mock_client = Mock()
-        transport = ConfsecHttpxTransport(mock_client)
+        transport = TransportClass(mock_client)
 
         url = URL("https://api.openai.com/v1/completions")
         request = Request("POST", url, content=b'{"prompt": "test", "max_tokens": 100}')
@@ -188,9 +274,10 @@ class TestModelTagInjection:
         assert result is request
         assert "X-Confsec-Node-Tags" not in result.headers
 
-    def test_maybe_add_model_tag_existing_header_no_duplicate(self):
+    def test_maybe_add_model_tag_existing_header_no_duplicate(self, transport_class):
+        _, TransportClass = transport_class
         mock_client = Mock()
-        transport = ConfsecHttpxTransport(mock_client)
+        transport = TransportClass(mock_client)
 
         url = URL("https://api.openai.com/v1/completions")
         request = Request(
@@ -206,9 +293,10 @@ class TestModelTagInjection:
             result.headers["X-Confsec-Node-Tags"] == "model=gpt-3.5-turbo,other=value"
         )
 
-    def test_maybe_add_model_tag_existing_header_with_new_model(self):
+    def test_maybe_add_model_tag_existing_header_with_new_model(self, transport_class):
+        _, TransportClass = transport_class
         mock_client = Mock()
-        transport = ConfsecHttpxTransport(mock_client)
+        transport = TransportClass(mock_client)
 
         url = URL("https://api.openai.com/v1/completions")
         request = Request(
@@ -222,9 +310,10 @@ class TestModelTagInjection:
 
         assert result.headers["X-Confsec-Node-Tags"] == "other=value,model=gpt-4"
 
-    def test_maybe_add_model_tag_doesnt_override_existing_model(self):
+    def test_maybe_add_model_tag_doesnt_override_existing_model(self, transport_class):
+        _, TransportClass = transport_class
         mock_client = Mock()
-        transport = ConfsecHttpxTransport(mock_client)
+        transport = TransportClass(mock_client)
 
         url = URL("https://api.openai.com/v1/completions")
         request = Request(
@@ -240,9 +329,10 @@ class TestModelTagInjection:
             result.headers["X-Confsec-Node-Tags"] == "model=gpt-3.5-turbo,other=value"
         )
 
-    def test_maybe_add_model_tag_multiple_existing_tags(self):
+    def test_maybe_add_model_tag_multiple_existing_tags(self, transport_class):
+        _, TransportClass = transport_class
         mock_client = Mock()
-        transport = ConfsecHttpxTransport(mock_client)
+        transport = TransportClass(mock_client)
 
         url = URL("https://api.openai.com/v1/completions")
         request = Request(

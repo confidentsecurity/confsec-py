@@ -239,7 +239,11 @@ static PyObject* py_confsec_client_do_request(PyObject* self, PyObject* args) {
         return NULL;
     }
 
+    // Release GIL during blocking network operation
+    Py_BEGIN_ALLOW_THREADS
     response_handle = Confsec_ClientDoRequest(handle, request, request_length, &err);
+    Py_END_ALLOW_THREADS
+
     HANDLE_ERROR(err);
 
     // In general, we expect an error to be returned if the response is NULL, but we
@@ -319,7 +323,11 @@ PyObject* py_confsec_response_get_body(PyObject* self, PyObject* args) {
         return NULL;
     }
 
+    // Release GIL during potentially blocking body read
+    Py_BEGIN_ALLOW_THREADS
     body = Confsec_ResponseGetBody(handle, &err);
+    Py_END_ALLOW_THREADS
+
     HANDLE_ERROR(err);
 
     // In general, we expect an error to be returned if the body is NULL, but we
@@ -369,7 +377,11 @@ static PyObject* py_confsec_response_stream_get_next(PyObject* self, PyObject* a
         return NULL;
     }
 
+    // Release GIL during blocking stream read
+    Py_BEGIN_ALLOW_THREADS
     chunk = Confsec_ResponseStreamGetNext(handle, &err);
+    Py_END_ALLOW_THREADS
+
     HANDLE_ERROR(err);
 
     if (chunk == NULL) {

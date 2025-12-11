@@ -8,7 +8,7 @@ from ..closeable import Closeable
 from ..libconfsec.base import IdentityPolicySource, LibConfsecBase, ClientHandle
 
 if TYPE_CHECKING:
-    from httpx import Client as HttpxClient
+    from httpx import AsyncClient as HttpxAsyncClient, Client as HttpxClient
 
 
 HttpClientType = Literal["httpx"]
@@ -134,6 +134,25 @@ class ConfsecClient(Closeable):
         from ._httpx import ConfsecHttpxTransport
 
         return HttpxClient(transport=ConfsecHttpxTransport(self))
+
+    def get_async_http_client(
+        self, http_client_type: HttpClientType = "httpx"
+    ) -> "HttpxAsyncClient":
+        """
+        Get an async HTTP client configured to use Confsec transport.
+
+        Args:
+            http_client_type: Type of HTTP client to create (currently only "httpx")
+
+        Returns:
+            Configured async HTTP client instance
+        """
+        assert http_client_type == "httpx"
+
+        from httpx import AsyncClient as HttpxAsyncClient
+        from ._httpx import ConfsecHttpxAsyncTransport
+
+        return HttpxAsyncClient(transport=ConfsecHttpxAsyncTransport(self))
 
     def _close(self):
         self._lc.client_destroy(self._handle)
