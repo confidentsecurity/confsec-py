@@ -1,7 +1,7 @@
 import pytest
 # import pdb
 
-from confsec.openai import OpenAI
+from confsec.openai import AsyncOpenAI, OpenAI
 
 MODEL = "qwen3-vl-30b-a3b-thinking"
 
@@ -9,6 +9,22 @@ MODEL = "qwen3-vl-30b-a3b-thinking"
 @pytest.fixture(scope="module")
 def client(env, api_url, api_key):
     _client = OpenAI(
+        api_key=api_key,
+        confsec_config={
+            "api_url": api_url,
+            "oidc_issuer_regex": "https://token.actions.githubusercontent.com",
+            "oidc_subject_regex": "^https://github.com/confidentsecurity/T/.github/workflows.*",
+            "default_node_tags": [f"model={MODEL}"],
+            "env": env,
+        },
+    )
+    yield _client
+    _client.close()
+
+
+@pytest.fixture(scope="module")
+def async_client(env, api_url, api_key):
+    _client = AsyncOpenAI(
         api_key=api_key,
         confsec_config={
             "api_url": api_url,
@@ -77,6 +93,69 @@ def test_openai_chat_completions_e2e(client):
     for chunk in stream:
         # Each chunk should have nonempty content
         # assert len(chunk.choices) > 0
+        if len(chunk.choices) == 0:
+            continue
+        if chunk.choices[0].finish_reason is not None:
+            chunks.append(chunk.choices[0].delta.content)
+
+    # Should have received at least one chunk
+    assert len(chunks) > 0
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_async_openai_completions_e2e(async_client):
+    # Test non-streaming completion
+    response = await async_client.completions.create(
+        model=MODEL,
+        prompt="Count to three",
+        stream=False,
+    )
+    # Response should have nonempty content
+    assert len(response.choices) > 0
+    assert response.choices[0].text
+
+    # Test streaming completion
+    stream = await async_client.completions.create(
+        model=MODEL,
+        prompt="Count to ten",
+        stream=True,
+    )
+    chunks = []
+    async for chunk in stream:
+        # Each chunk should have nonempty content
+        if len(chunk.choices) == 0:
+            continue
+        if chunk.choices[0].finish_reason is not None:
+            chunks.append(chunk.choices[0].text)
+
+    # Should have received at least one chunk
+    assert len(chunks) > 0
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_async_openai_chat_completions_e2e(async_client):
+    # Test non-streaming chat completion
+    response = await async_client.chat.completions.create(
+        model=MODEL,
+        messages=[{"role": "user", "content": "Count to three"}],
+        stream=False,
+    )
+    # Response should have nonempty content
+    assert len(response.choices) > 0
+    assert response.choices[0].message.content
+
+    # Test streaming chat completion
+    stream = await async_client.chat.completions.create(
+        model=MODEL,
+        messages=[{"role": "user", "content": "Count to ten"}],
+        stream=True,
+    )
+
+    chunks = []
+    async for chunk in stream:
+        # Each chunk should have nonempty content
         if len(chunk.choices) == 0:
             continue
         if chunk.choices[0].finish_reason is not None:
