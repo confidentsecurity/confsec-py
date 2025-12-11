@@ -9,7 +9,7 @@ from confsec.client import ConfsecClient, Response
 
 URL = "http://confsec.invalid/v1/completions"
 API_URL = "https://app.confident.security"
-MODEL = "gpt-oss:20b"
+MODEL = "qwen3-vl-30b-a3b-thinking"
 HEADERS = {
     "Content-Type": "application/json",
     "X-Confsec-Node-Tags": f"model={MODEL}",

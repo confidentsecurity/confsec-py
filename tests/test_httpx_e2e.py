@@ -6,7 +6,7 @@ from httpx import SyncByteStream
 from confsec.client import ConfsecClient
 
 URL = "http://confsec.invalid/v1/completions"
-MODEL = "gpt-oss:20b"
+MODEL = "qwen3-vl-30b-a3b-thinking"
 HEADERS = {
     "Accept": "application/x-ndjson",
     "Content-Type": "application/json",

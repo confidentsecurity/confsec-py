@@ -3,7 +3,7 @@ import pytest
 
 from confsec.openai import OpenAI
 
-MODEL = "gpt-oss:20b"
+MODEL = "qwen3-vl-30b-a3b-thinking"
 
 
 @pytest.fixture(scope="module")
