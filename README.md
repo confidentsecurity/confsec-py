@@ -25,8 +25,8 @@ Use our OpenAI wrapper as a drop-in replacement for existing OpenAI clients:
 from confsec.openai import OpenAI
 client = OpenAI(confsec_config={
     "api_url": "https://app.confident.security",
-    "oidc_issuer": "https://token.actions.githubusercontent.com",
-    "oidc_subject": "^https://github.com/confidentsecurity/T/.github/workflows.*",
+    "oidc_issuer_regex": "https://token.actions.githubusercontent.com",
+    "oidc_subject_regex": "^https://github.com/confidentsecurity/T/.github/workflows.*",
 })
 ```
 
@@ -40,8 +40,8 @@ from confsec import ConfsecClient
 with ConfsecClient(
     api_url="https://app.confident.security",
     api_key=os.environ["CONFSEC_API_KEY"],
-    oidc_issuer="https://token.actions.githubusercontent.com",
-    oidc_subject="^https://github.com/confidentsecurity/T/.github/workflows.*",
+    oidc_issuer_regex="https://token.actions.githubusercontent.com",
+    oidc_subject_regex="^https://github.com/confidentsecurity/T/.github/workflows.*",
 ) as client:
     http = client.get_http_client()
 ```
@@ -106,8 +106,8 @@ Currently, the following subset of APIs are supported:
 import os
 client = OpenAI(confsec_config={
     "api_url": "https://app.confident.security",
-    "oidc_issuer": "https://token.actions.githubusercontent.com",
-    "oidc_subject": "^https://github.com/confidentsecurity/T/.github/workflows.*",
+    "oidc_issuer_regex": "https://token.actions.githubusercontent.com",
+    "oidc_subject_regex": "^https://github.com/confidentsecurity/T/.github/workflows.*",
 })
 
 stream = client.chat.completions.create(
@@ -145,8 +145,8 @@ from confsec import ConfsecClient
 with ConfsecClient(
     api_url="https://app.confident.security",
     api_key=os.environ["CONFSEC_API_KEY"],
-    oidc_issuer="https://token.actions.githubusercontent.com",
-    oidc_subject="^https://github.com/confidentsecurity/T/.github/workflows.*",
+    oidc_issuer_regex="https://token.actions.githubusercontent.com",
+    oidc_subject_regex="^https://github.com/confidentsecurity/T/.github/workflows.*",
 ) as client:
     http = client.get_http_client()
     response = http.request(
